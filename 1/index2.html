@@ -2450,35 +2450,56 @@
   const gpsElHeader   = document.getElementById('gpsValue');
   const sijilElHeader = document.getElementById('layakSijilValue');
 
-  // ===== helper ringkas =====
-  const isMissing = (v) => v === null || v === undefined || String(v).trim() === "" || String(v).trim() === "-" || String(v).trim() === "—";
+  // ===============================
+  // Helper standard (SELARAS TAB 3)
+  // ===============================
+  const isMissing = (v) =>
+    v === null ||
+    v === undefined ||
+    String(v).trim() === "" ||
+    String(v).trim() === "-" ||
+    String(v).trim() === "—";
+
   const norm = (v) => String(v ?? "").trim().toUpperCase();
-  const isValidGrade = (g) => !isMissing(g) && gradeValueMapping.hasOwnProperty(norm(g)); // guna mapping sedia ada
-  const isPassed = (g) => isValidGrade(g) && norm(g) !== "G" && norm(g) !== "TH";
 
-  let jumlahNilai  = 0,
-      bilGred      = 0,
-      jumlahMurid  = 0;
+  // Gred sah mesti wujud dalam gradeValueMapping
+  const isValidGrade = (g) =>
+    !isMissing(g) && gradeValueMapping.hasOwnProperty(norm(g));
 
-  // ✅ untuk sijil: denominator khas (hanya yg ada BM+SEJ)
+  // Lulus = gred sah & bukan G / TH
+  const isPassed = (g) =>
+    isValidGrade(g) && norm(g) !== "G" && norm(g) !== "TH";
+
+  // ===============================
+  // Pembolehubah GPS & Sijil
+  // ===============================
+  let jumlahNilai = 0,
+      bilGred     = 0,
+      jumlahMurid = 0;
+
+  // Layak Sijil (denominator khas)
   let calonSijil = 0,
       layak      = 0;
 
   const bmCol  = cariKolumGredSubjek("BM");
   const sejCol = cariKolumGredSubjek("SEJ");
 
-  // 🆕 Senarai kolum GRED utk subjek WAJIB sahaja (GPS)
+  // ===============================
+  // Subjek WAJIB sahaja untuk GPS
+  // ===============================
   const wajibColumns = subjectColumns.filter(colName => {
     const subjCode = (colName.split(" ")[0] || "").toUpperCase();
     const flag = subjectFlagMap[subjCode];
-    if (flag === "0") return false; // elektif jangan kira
-    return true;
+    return flag !== "0"; // elektif dikecualikan
   });
 
+  // ===============================
+  // Proses setiap murid
+  // ===============================
   data.forEach(row => {
     let adaGredWajib = false;
 
-    // ===== GPS (kekal) =====
+    // ----- GPS -----
     wajibColumns.forEach(col => {
       const g = norm(row[col]);
       if (gradeValueMapping.hasOwnProperty(g)) {
@@ -2490,20 +2511,25 @@
 
     if (adaGredWajib) jumlahMurid++;
 
-    // ===== Layak Sijil (dibetulkan) =====
+    // ----- LAYAK SIJIL -----
     const bm  = bmCol  ? row[bmCol]  : "";
     const sej = sejCol ? row[sejCol] : "";
 
-    // hanya kira calon sijil jika BM & SEJ ada gred sah (bukan "-", bukan kosong)
-    if (isValidGrade(bm) && isValidGrade(sej)) {
-      calonSijil++;
-      if (isPassed(bm) && isPassed(sej)) layak++;
-    }
+    // ❗ Murid BM/SEJ "-" / kosong → BUKAN calon sijil
+    if (!isValidGrade(bm) || !isValidGrade(sej)) return;
+
+    calonSijil++;
+
+    if (isPassed(bm) && isPassed(sej)) layak++;
   });
 
-  const gps = bilGred ? (jumlahNilai / bilGred).toFixed(2) : "-";
+  // ===============================
+  // Paparan KPI
+  // ===============================
+  const gps = bilGred
+    ? (jumlahNilai / bilGred).toFixed(2)
+    : "-";
 
-  // ✅ peratus layak guna denominator calonSijil, bukan jumlahMurid
   const peratusLayak = calonSijil
     ? ((layak / calonSijil) * 100).toFixed(1) + "%"
     : "-";
@@ -2511,10 +2537,11 @@
   gpsElHeader.textContent   = gps;
   sijilElHeader.textContent = peratusLayak;
 
-  // (optional) debug
-  console.log("GPS:", { jumlahNilai, bilGred, jumlahMurid });
-  console.log("SIJIL:", { calonSijil, layak, peratusLayak });
+  // Debug (boleh buang jika mahu)
+  console.log("HEADER GPS:", { jumlahNilai, bilGred, jumlahMurid });
+  console.log("HEADER SIJIL:", { calonSijil, layak, peratusLayak });
 }
+
 
 
                 /* ========= TAB NAV ========= */
