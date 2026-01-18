@@ -295,7 +295,7 @@
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center space-x-4">
-                            <img src="https://leepie.github.io/kbs/KBs-LOGO.png" alt="SMK Kampung Bahagia" class="h-16 w-16 object-contain rounded-full border" />
+                            <img src="https://leepie.github.io/kbs/KBs-LOGO-FINAL.png" alt="SMK Kampung Bahagia" class="h-16 w-16 object-contain rounded-full border" />
                             <div>
                                 <h1 class="text-2xl font-bold text-gray-900">PPSA TOV T4</h1>
                                 <p class="text-sm text-gray-600">TOVT4</p>
@@ -701,9 +701,9 @@
                 </head>
                 <body>
                   <div class="slip-header">
-                    <img src="https://raw.githubusercontent.com/Leepie/AnalisisData/main/LOGO.png" alt="Logo">
-                    <p><b>SEKOLAH MENENGAH KEBANGSAAN DATO' KAMARUDDIN</b><br>
-                    JALAN BESAR, 34500 BATU KURAU, PERAK</p>
+                    <img src="https://leepie.github.io/kbs/KBs-LOGO-FINAL.png" alt="Logo">
+                    <p><b>SEKOLAH MENENGAH KEBANGSAAN KAMPUNG BAHAGIA</b><br>
+                    TELUK INTAN, PERAK DR</p>
                   </div>
             
                   <h2>RUMUSAN PENCAPAIAN MENGIKUT SUBJEK</h2>
@@ -1604,8 +1604,8 @@
                 <div id="slipIndividuSection" class="container-max px-4 py-4 hidden">
                     <div class="slip-wrapper">
                         <div class="slip-container"> <!-- Header -->
-                            <div class="slip-header"> <img src="https://leepie.github.io/kbs/KBs-LOGO.png" alt="Logo">
-                                <p><b>SEKOLAH MENENGAH KAMPUNG BAHAGIA<br> TELUK INTAN, PERAK.</b></p>
+                            <div class="slip-header"> <img src="https://leepie.github.io/kbs/KBs-LOGO-FINAL.png" alt="Logo">
+                                <p><b>SEKOLAH MENENGAH KAMPUNG BAHAGIA<br> TELUK INTAN, PERAK DR</b></p>
                                 <p class="slip-title">SLIP KEPUTUSAN PEPERIKSAAN UASA (TOV T4) SESI AKADEMIK TAHUN 2025</p>
                             </div> <!-- Maklumat Murid -->
                             <table>
@@ -2447,69 +2447,102 @@
         });
               
                 function kiraHeaderKPI(data) {
-                    const gpsElHeader   = document.getElementById('gpsValue');
-                    const sijilElHeader = document.getElementById('layakSijilValue');
-                
-                    let jumlahNilai  = 0,
-                        bilGred      = 0,
-                        jumlahMurid  = 0,
-                        layak        = 0;
-                
-                    const bmCol  = cariKolumGredSubjek("BM");
-                    const sejCol = cariKolumGredSubjek("SEJ");
-                
-                    // 🆕 Senarai kolum GRED utk subjek WAJIB sahaja
-                    const wajibColumns = subjectColumns.filter(colName => {
-                        const subjCode = (colName.split(" ")[0] || "").toUpperCase(); // "BM" dari "BM G"
-                        const flag = subjectFlagMap[subjCode];
-                
-                        // Jika ada flag dan flag = "0" → subjek elektif, JANGAN kira
-                        if (flag === "0") return false;
-                
-                        // Jika tiada flag (contoh kolum tambahan), anggap WAJIB (untuk backward compatible)
-                        return true;
-                    });
-                
-                    console.log("👉 Kolum GRED subjek wajib yang dikira GPS:", wajibColumns);
-                
-                    data.forEach(row => {
-                        let adaGred = false;
-                
-                        // 🎯 GPS: hanya subjek wajib
-                        wajibColumns.forEach(col => {
-                            const g = (row[col] || "").toUpperCase();
-                            if (gradeValueMapping.hasOwnProperty(g)) {
-                                jumlahNilai += gradeValueMapping[g];
-                                bilGred++;
-                                adaGred = true;
-                            }
-                        });
-                
-                        if (adaGred) {
-                            jumlahMurid++;
-                
-                            // Layak Sijil: KEKAL syarat asal (BM & SEJ ≠ G)
-                            const bm  = (bmCol  ? row[bmCol]  : "").toUpperCase();
-                            const sej = (sejCol ? row[sejCol] : "").toUpperCase();
-                            if (bm && sej && bm !== "G" && sej !== "G") {
-                                layak++;
-                            }
-                        }
-                    });
-                
-                    console.log("👉 jumlahNilai:", jumlahNilai, "bilGred:", bilGred, "jumlahMurid:", jumlahMurid, "layak:", layak);
-                
-                    const gps = bilGred
-                        ? (jumlahNilai / bilGred).toFixed(2)
-                        : "-";
-                
-                    const peratusLayak = jumlahMurid
-                        ? ((layak / jumlahMurid) * 100).toFixed(1) + "%"
-                        : "-";
-                
-                    gpsElHeader.textContent   = gps;
-                    sijilElHeader.textContent = peratusLayak;
-                }
+  const gpsElHeader   = document.getElementById('gpsValue');
+  const sijilElHeader = document.getElementById('layakSijilValue');
+
+  // ===============================
+  // Helper standard (SELARAS TAB 3)
+  // ===============================
+  const isMissing = (v) =>
+    v === null ||
+    v === undefined ||
+    String(v).trim() === "" ||
+    String(v).trim() === "-" ||
+    String(v).trim() === "—";
+
+  const norm = (v) => String(v ?? "").trim().toUpperCase();
+
+  // Gred sah mesti wujud dalam gradeValueMapping
+  const isValidGrade = (g) =>
+    !isMissing(g) && gradeValueMapping.hasOwnProperty(norm(g));
+
+  // Lulus = gred sah & bukan G / TH
+  const isPassed = (g) =>
+    isValidGrade(g) && norm(g) !== "G" && norm(g) !== "TH";
+
+  // ===============================
+  // Pembolehubah GPS & Sijil
+  // ===============================
+  let jumlahNilai = 0,
+      bilGred     = 0,
+      jumlahMurid = 0;
+
+  // Layak Sijil (denominator khas)
+  let calonSijil = 0,
+      layak      = 0;
+
+  const bmCol  = cariKolumGredSubjek("BM");
+  const sejCol = cariKolumGredSubjek("SEJ");
+
+  // ===============================
+  // Subjek WAJIB sahaja untuk GPS
+  // ===============================
+  const wajibColumns = subjectColumns.filter(colName => {
+    const subjCode = (colName.split(" ")[0] || "").toUpperCase();
+    const flag = subjectFlagMap[subjCode];
+    return flag !== "0"; // elektif dikecualikan
+  });
+
+  // ===============================
+  // Proses setiap murid
+  // ===============================
+  data.forEach(row => {
+    let adaGredWajib = false;
+
+    // ----- GPS -----
+    wajibColumns.forEach(col => {
+      const g = norm(row[col]);
+      if (gradeValueMapping.hasOwnProperty(g)) {
+        jumlahNilai += gradeValueMapping[g];
+        bilGred++;
+        adaGredWajib = true;
+      }
+    });
+
+    if (adaGredWajib) jumlahMurid++;
+
+    // ----- LAYAK SIJIL -----
+    const bm  = bmCol  ? row[bmCol]  : "";
+    const sej = sejCol ? row[sejCol] : "";
+
+    // ❗ Murid BM/SEJ "-" / kosong → BUKAN calon sijil
+    if (!isValidGrade(bm) || !isValidGrade(sej)) return;
+
+    calonSijil++;
+
+    if (isPassed(bm) && isPassed(sej)) layak++;
+  });
+
+  // ===============================
+  // Paparan KPI
+  // ===============================
+  const gps = bilGred
+    ? (jumlahNilai / bilGred).toFixed(2)
+    : "-";
+
+  const peratusLayak = calonSijil
+    ? ((layak / calonSijil) * 100).toFixed(1) + "%"
+    : "-";
+
+  gpsElHeader.textContent   = gps;
+  sijilElHeader.textContent = peratusLayak;
+
+  // Debug (boleh buang jika mahu)
+  console.log("HEADER GPS:", { jumlahNilai, bilGred, jumlahMurid });
+  console.log("HEADER SIJIL:", { calonSijil, layak, peratusLayak });
+}
+
+
 
                 /* ========= TAB NAV ========= */
                 function switchTab(which) {
@@ -3151,480 +3184,493 @@ function generateOverallAnalysis() {
                     }
                 });
 
-                // ====== 3-laras sort: Markah & Gred ======
-                function resetOtherSort(except) {
-                    if (except !== 'markah') {
-                        markahSortState = 'none';
-                        document.getElementById('senaraiMarkahSortBtn').classList.remove('asc', 'desc');
-                    }
-                    if (except !== 'gred') {
-                        gredSortState = 'none';
-                        document.getElementById('senaraiGredSortBtn').classList.remove('asc', 'desc');
-                    }
-                }
-                document.addEventListener('click', (e) => {
-                    if (e.target.closest('#senaraiMarkahSortBtn')) {
-                        const btn = document.getElementById('senaraiMarkahSortBtn');
-                        // kitaran none -> asc -> desc -> none
-                        if (markahSortState === 'none') {
-                            markahSortState = 'asc';
-                            btn.classList.add('asc');
-                            btn.classList.remove('desc');
-                        } else if (markahSortState === 'asc') {
-                            markahSortState = 'desc';
-                            btn.classList.remove('asc');
-                            btn.classList.add('desc');
-                        } else {
-                            markahSortState = 'none';
-                            btn.classList.remove('asc', 'desc');
-                        }
-                        resetOtherSort('markah');
-                        drawSenaraiMuridPage();
-                    }
-                    if (e.target.closest('#senaraiGredSortBtn')) {
-                        const btn = document.getElementById('senaraiGredSortBtn');
-                        if (gredSortState === 'none') {
-                            gredSortState = 'asc';
-                            btn.classList.add('asc');
-                            btn.classList.remove('desc');
-                        } else if (gredSortState === 'asc') {
-                            gredSortState = 'desc';
-                            btn.classList.remove('asc');
-                            btn.classList.add('desc');
-                        } else {
-                            gredSortState = 'none';
-                            btn.classList.remove('asc', 'desc');
-                        }
-                        resetOtherSort('gred');
-                        drawSenaraiMuridPage();
-                    }
-                });
+                // =======================================================
+// TAB 3: Analisis Layak Sijil (FIX "-" jadi Layak)
+// =======================================================
 
-                // ====== TAB 3: Analisis Layak Sijil (selari dengan header 73.0%) ======
-                function generateEligibilityCards() {
-                    if (!cachedData) return;
+// ✅ Helper (letak sekali sahaja)
+function isMissing(v){
+  return v === null || v === undefined || String(v).trim() === "" || String(v).trim() === "-" || String(v).trim() === "—";
+}
+function norm(v){ return String(v ?? "").trim().toUpperCase(); }
 
-                    const kelasHeader = cariKolum("kelas");
-                    const bmCol = cariKolumGredSubjek("BM");
-                    const sejCol = cariKolumGredSubjek("SEJ");
+// guna gradeValueMapping sedia ada untuk semak gred sah
+function isValidGrade(g){
+  g = norm(g);
+  return !isMissing(g) && gradeValueMapping.hasOwnProperty(g);
+}
+function isPassedGrade(g){
+  g = norm(g);
+  return isValidGrade(g) && g !== "G" && g !== "TH";
+}
 
-                    const kelasTerpilih = document.getElementById("ls-kelasFilter").value;
-                    const data = (!kelasTerpilih || kelasTerpilih === "SEMUA KELAS") ?
-                        cachedData :
-                        cachedData.filter(r => (r[kelasHeader] || "") === kelasTerpilih);
 
-                    let layak = 0,
-                        jumlah = 0;
-                    data.forEach(row => {
-                        // Pastikan murid ada sekurang-kurangnya 1 gred
-                        let adaGred = false;
-                        for (const c of subjectColumns) {
-                            const g = (row[c] || "").toUpperCase();
-                            if (gradeValueMapping.hasOwnProperty(g)) {
-                                adaGred = true;
-                                break;
-                            }
-                        }
-                        if (!adaGred) return;
+// ====== TAB 3: Analisis Layak Sijil ======
+function generateEligibilityCards() {
+  if (!cachedData) return;
 
-                        jumlah++;
-                        const bm = (bmCol ? row[bmCol] : "").toUpperCase();
-                        const sej = (sejCol ? row[sejCol] : "").toUpperCase();
+  const kelasHeader = cariKolum("kelas");
+  const bmCol  = cariKolumGredSubjek("BM");
+  const sejCol = cariKolumGredSubjek("SEJ");
 
-                        // Layak = ada BM & SEJ, dan kedua-duanya bukan "G" atau "TH"
-                        if (bm && sej && bm !== "G" && sej !== "G" && bm !== "TH" && sej !== "TH") {
-                            layak++;
-                        }
-                    });
+  const kelasTerpilih = document.getElementById("ls-kelasFilter").value;
+  const data = (!kelasTerpilih || kelasTerpilih === "SEMUA KELAS")
+    ? cachedData
+    : cachedData.filter(r => (r[kelasHeader] || "") === kelasTerpilih);
 
-                    const tidak = Math.max(0, jumlah - layak);
+  let layak = 0,
+      jumlah = 0,
+      tiadaData = 0;
 
-                    // ========== 1. KAD RINGKASAN LAYAK SIJIL==========
-                    document.getElementById("countLayak").textContent = layak;
-                    document.getElementById("countTidakLayak").textContent = tidak;
-                    document.getElementById("countJumlah").textContent = jumlah;
-                    document.getElementById("percentLayak").textContent = jumlah ? ((layak / jumlah) * 100).toFixed(1) + "%" : "0%";
-                    document.getElementById("percentTidak").textContent = jumlah ? ((tidak / jumlah) * 100).toFixed(1) + "%" : "0%";
-                    document.getElementById("kadLayakSection")?.classList.remove("hidden");
+  data.forEach(row => {
+    // Pastikan murid ada sekurang-kurangnya 1 gred (subjek apa pun)
+    let adaGred = false;
+    for (const c of subjectColumns) {
+      const g = norm(row[c]);
+      if (gradeValueMapping.hasOwnProperty(g)) {
+        adaGred = true;
+        break;
+      }
+    }
+    if (!adaGred) return;
 
-                    // ========== 2. JADUAL BM & SEJ ==========
-                    renderBmSejTable(data);
-                    document.getElementById("jadualBmSej")?.classList.remove("hidden");
+    const bm  = bmCol  ? row[bmCol]  : "";
+    const sej = sejCol ? row[sejCol] : "";
 
-                    // ========== 3. JADUAL SILANG BM-SEJ ==========
-                    renderSilangBmSej(data);
-                    document.getElementById("kadSilangBmSej")?.classList.remove("hidden");
+    // ✅ Jika BM/SEJ tiada data sah, jangan masuk kiraan sijil
+    if (!isValidGrade(bm) || !isValidGrade(sej)) {
+      tiadaData++;
+      return;
+    }
 
-                    // ========== 4. SENARAI MURID ==========
-                    renderSenaraiMuridLayak(data);
-                    document.getElementById("kadSenaraiLayak")?.classList.remove("hidden");
+    // ✅ Denominator sijil: hanya calon yang ada BM+SEJ sah
+    jumlah++;
 
-                }
+    // ✅ Layak: BM & SEJ lulus (bukan G/TH)
+    if (isPassedGrade(bm) && isPassedGrade(sej)) {
+      layak++;
+    }
+  });
 
-                // ✅ Paparkan Senarai Murid T3
-                function renderSenaraiMuridLayak(data) {
-                    const namaHeader = cariKolum("nama");
-                    const kelasHeader = cariKolum("kelas");
-                    const bmCol = cariKolumMarkahSubjek("BM");
-                    const sejCol = cariKolumMarkahSubjek("SEJ");
-                    const bmGredCol = cariKolumGredSubjek("BM");
-                    const sejGredCol = cariKolumGredSubjek("SEJ");
+  const tidak = Math.max(0, jumlah - layak);
 
-                    const rows = [];
-                    data.forEach(r => {
-                        const nama = (r[namaHeader] || "").trim();
-                        const kelas = (r[kelasHeader] || "").trim();
+  // ========== 1. KAD RINGKASAN LAYAK SIJIL ==========
+  document.getElementById("countLayak").textContent = layak;
+  document.getElementById("countTidakLayak").textContent = tidak;
+  document.getElementById("countJumlah").textContent = jumlah;
 
-                        // 🚫 Skip baris pelik: tiada nama, nama = nombor, atau kelas = "1"
-                        if (!nama || /^\d+$/.test(nama) || kelas === "1") return;
+  document.getElementById("percentLayak").textContent = jumlah
+    ? ((layak / jumlah) * 100).toFixed(1) + "%"
+    : "0%";
 
-                        const markBM = bmCol ? (r[bmCol] || "-") : "-";
-                        const markSEJ = sejCol ? (r[sejCol] || "-") : "-";
-                        const gredBM = bmGredCol ? (r[bmGredCol] || "-").toUpperCase() : "-";
-                        const gredSEJ = sejGredCol ? (r[sejGredCol] || "-").toUpperCase() : "-";
+  document.getElementById("percentTidak").textContent = jumlah
+    ? ((tidak / jumlah) * 100).toFixed(1) + "%"
+    : "0%";
 
-                        // Status Layak = BM & SEJ bukan "G" atau "TH"
-                        let status = "Tidak Layak";
-                        if (gredBM && gredSEJ && gredBM !== "G" && gredSEJ !== "G" && gredBM !== "TH" && gredSEJ !== "TH") {
-                            status = "Layak";
-                        }
+  document.getElementById("kadLayakSection")?.classList.remove("hidden");
 
-                        rows.push({
-                            nama,
-                            kelas,
-                            markBM,
-                            gredBM,
-                            markSEJ,
-                            gredSEJ,
-                            status
-                        });
-                    });
+  // ========== 2. JADUAL BM & SEJ ==========
+  renderBmSejTable(data); // table ini sendiri akan abaikan "-" (lihat fungsi bawah)
+  document.getElementById("jadualBmSej")?.classList.remove("hidden");
 
-                    layakState.rows = rows;
-                    layakState.rowsOriginal = [...rows];
-                    layakState.page = 1;
-                    drawLayakPage();
-                }
+  // ========== 3. JADUAL SILANG BM-SEJ ==========
+  renderSilangBmSej(data); // sudah fix: skip "-"
+  document.getElementById("kadSilangBmSej")?.classList.remove("hidden");
 
-                // Fungsi global
-                function renderSilangBmSej(data) {
-                    const bmCol = cariKolumGredSubjek("BM");
-                    const sejCol = cariKolumGredSubjek("SEJ");
-                    if (!bmCol || !sejCol) return;
+  // ========== 4. SENARAI MURID ==========
+  renderSenaraiMuridLayak(data);
+  document.getElementById("kadSenaraiLayak")?.classList.remove("hidden");
 
-                    const counts = {
-                        bmLulus: {
-                            sejLulus: 0,
-                            sejGagal: 0,
-                            sejTH: 0
-                        },
-                        bmGagal: {
-                            sejLulus: 0,
-                            sejGagal: 0,
-                            sejTH: 0
-                        },
-                        bmTH: {
-                            sejLulus: 0,
-                            sejGagal: 0,
-                            sejTH: 0
-                        },
-                    };
+  // debug optional
+  console.log("TAB3 LayakSijil:", { layak, tidak, jumlah, tiadaData });
+}
 
-                    let total = 0;
 
-                    data.forEach(r => {
-                        const bm = (r[bmCol] || "").toUpperCase();
-                        const sej = (r[sejCol] || "").toUpperCase();
+// ✅ Paparkan Senarai Murid T3
+function renderSenaraiMuridLayak(data) {
+  const namaHeader  = cariKolum("nama");
+  const kelasHeader = cariKolum("kelas");
+  const bmCol       = cariKolumMarkahSubjek("BM");
+  const sejCol      = cariKolumMarkahSubjek("SEJ");
+  const bmGredCol   = cariKolumGredSubjek("BM");
+  const sejGredCol  = cariKolumGredSubjek("SEJ");
 
-                        let bmCat = bm === "G" ? "bmGagal" : bm === "TH" ? "bmTH" : "bmLulus";
-                        let sejCat = sej === "G" ? "sejGagal" : sej === "TH" ? "sejTH" : "sejLulus";
+  const rows = [];
 
-                        counts[bmCat][sejCat]++;
-                        total++;
-                    });
+  data.forEach(r => {
+    const nama  = (r[namaHeader]  || "").trim();
+    const kelas = (r[kelasHeader] || "").trim();
 
-                    const body = document.getElementById("silangBmSejBody");
-                    body.innerHTML = "";
+    // 🚫 Skip baris pelik: tiada nama, nama = nombor, atau kelas = "1"
+    if (!nama || /^\d+$/.test(nama) || kelas === "1") return;
 
-                    function row(label, c) {
-                        const rowTotal = c.sejLulus + c.sejGagal + c.sejTH;
-                        return `
-              <tr class="text-center">
-                <td class="px-3 py-2 text-left font-medium">${label}</td>
-                <td class="px-3 py-2 text-green-600">${c.sejLulus} (${((c.sejLulus/total)*100).toFixed(1)}%)</td>
-                <td class="px-3 py-2 text-red-600">${c.sejGagal} (${((c.sejGagal/total)*100).toFixed(1)}%)</td>
-                <td class="px-3 py-2">${c.sejTH} (${((c.sejTH/total)*100).toFixed(1)}%)</td>
-                <td class="px-3 py-2 font-bold text-blue-600 bg-yellow-50">${rowTotal} (${((rowTotal/total)*100).toFixed(1)}%)</td>
-              </tr>`;
-                    }
+    const markBM  = bmCol  ? (r[bmCol]  || "-") : "-";
+    const markSEJ = sejCol ? (r[sejCol] || "-") : "-";
 
-                    body.innerHTML += row("BM Lulus", counts.bmLulus);
-                    body.innerHTML += row("BM Gagal", counts.bmGagal);
-                    body.innerHTML += row("BM TH", counts.bmTH);
+    const gredBM  = bmGredCol  ? norm(r[bmGredCol]  || "-") : "-";
+    const gredSEJ = sejGredCol ? norm(r[sejGredCol] || "-") : "-";
 
-                    // Jumlah keseluruhan
-                    const jLulus = counts.bmLulus.sejLulus + counts.bmGagal.sejLulus + counts.bmTH.sejLulus;
-                    const jGagal = counts.bmLulus.sejGagal + counts.bmGagal.sejGagal + counts.bmTH.sejGagal;
-                    const jTH = counts.bmLulus.sejTH + counts.bmGagal.sejTH + counts.bmTH.sejTH;
+    // ✅ Status (FIX: "-" tidak dianggap layak)
+    let status = "Tiada Data";
+    if (isValidGrade(gredBM) && isValidGrade(gredSEJ)) {
+      status = (isPassedGrade(gredBM) && isPassedGrade(gredSEJ)) ? "Layak" : "Tidak Layak";
+    }
 
-                    body.innerHTML += `
-            <tr class="font-bold bg-yellow-100 text-center">
-              <td class="px-3 py-2 text-left">Jumlah</td>
-              <td class="px-3 py-2 text-green-600">${jLulus} (${((jLulus/total)*100).toFixed(1)}%)</td>
-              <td class="px-3 py-2 text-red-600">${jGagal} (${((jGagal/total)*100).toFixed(1)}%)</td>
-              <td class="px-3 py-2">${jTH} (${((jTH/total)*100).toFixed(1)}%)</td>
-              <td class="px-3 py-2 text-blue-600">${total} (100.0%)</td>
-            </tr>`;
-                }
+    rows.push({
+      nama,
+      kelas,
+      markBM,
+      gredBM,
+      markSEJ,
+      gredSEJ,
+      status
+    });
+  });
 
-                // Render jadual BM & SEJ
-                function renderBmSejTable(data) {
-                    const body = document.getElementById("bmSejBody");
-                    body.innerHTML = "";
+  layakState.rows = rows;
+  layakState.rowsOriginal = [...rows];
+  layakState.page = 1;
+  drawLayakPage();
+}
 
-                    ["BM", "SEJ"].forEach(subjek => {
-                        const colGred = cariKolumGredSubjek(subjek);
-                        if (!colGred) {
-                            body.innerHTML += `<tr><td colspan="16" class="px-3 py-2 text-center text-red-600">
-        Tiada data ${subjek} ditemui.</td></tr>`;
-                            return;
-                        }
 
-                        const counts = Object.fromEntries(chartGradeLabels.map(g => [g, 0]));
-                        let hadir = 0,
-                            th = 0,
-                            totalNilai = 0;
+// =======================================================
+// Jadual Silang BM-SEJ (FIX: "-" jangan masuk Lulus)
+// =======================================================
+function renderSilangBmSej(data) {
+  const bmCol  = cariKolumGredSubjek("BM");
+  const sejCol = cariKolumGredSubjek("SEJ");
+  if (!bmCol || !sejCol) return;
 
-                        data.forEach(r => {
-                            const g = (r[colGred] || "").toUpperCase();
-                            if (gradeValueMapping.hasOwnProperty(g)) {
-                                counts[g]++;
-                                hadir++;
-                                totalNilai += gradeValueMapping[g];
-                            } else if (g === "TH") {
-                                th++;
-                            }
-                        });
+  const counts = {
+    bmLulus: { sejLulus: 0, sejGagal: 0, sejTH: 0 },
+    bmGagal: { sejLulus: 0, sejGagal: 0, sejTH: 0 },
+    bmTH:    { sejLulus: 0, sejGagal: 0, sejTH: 0 },
+  };
 
-                        const lulus = hadir - (counts["G"] || 0);
-                        const gagal = counts["G"] || 0;
-                        const pLulus = hadir ? ((lulus / hadir) * 100).toFixed(1) : "0.0";
-                        const pGagal = hadir ? ((gagal / hadir) * 100).toFixed(1) : "0.0";
-                        const gpmp = hadir ? (totalNilai / hadir).toFixed(2) : "--";
+  let total = 0;
 
-                        body.innerHTML += `
-              <tr class="text-center">
-                <td class="px-3 py-2 font-medium text-left">
-                  ${subjectNameMap[subjek] || subjek}
-                </td>
-                <td class="px-3 py-2 text-blue-600">${hadir}</td>
-                <td class="px-3 py-2">${th}</td>
-                ${chartGradeLabels.map(g=>{
-                  const cls=(["A+","A","A-"].includes(g))?"bg-green-50":
-                            (["B+","B"].includes(g))?"bg-yellow-50":"bg-red-50";
-                  return `<td class="px-3 py-2 ${cls}">${counts[g]}</td>`;
-                }).join("")}
-                <td class="px-3 py-2 text-green-600 font-medium">${pLulus}%</td>
-                <td class="px-3 py-2 text-red-600 font-medium">${pGagal}%</td>
-                <td class="px-3 py-2 text-purple-600 font-bold">${gpmp}</td>
-              </tr>`;
-                    });
-                }
+  data.forEach(r => {
+    const bm  = norm(r[bmCol]);
+    const sej = norm(r[sejCol]);
 
-                // ====== Senarai Murid Layak Sijil (Tab 3) ======
-                const layakState = {
-                    rows: [],
-                    rowsOriginal: [],
-                    page: 1,
-                    pageSize: 5
-                };
-                let layakBmMarkahSortState = "none";
-                let layakSejMarkahSortState = "none";
-                let layakStatusSortState = "none";
+    // ✅ SKIP jika salah satu tiada data (contoh "-")
+    if (!isValidGrade(bm) || !isValidGrade(sej)) return;
 
-                function getSortedLayakRows() {
-                    let rows = [...layakState.rows];
+    const bmCat  = (bm === "G")  ? "bmGagal" : (bm === "TH") ? "bmTH" : "bmLulus";
+    const sejCat = (sej === "G") ? "sejGagal" : (sej === "TH") ? "sejTH" : "sejLulus";
 
-                    if (layakBmMarkahSortState !== "none") {
-                        const asc = (layakBmMarkahSortState === "asc");
-                        return rows.sort((a, b) => {
-                            const A = a.markBM === "-" ? (asc ? Infinity : -Infinity) : Number(a.markBM);
-                            const B = b.markBM === "-" ? (asc ? Infinity : -Infinity) : Number(b.markBM);
-                            return asc ? A - B : B - A;
-                        });
-                    }
-                    if (layakSejMarkahSortState !== "none") {
-                        const asc = (layakSejMarkahSortState === "asc");
-                        return rows.sort((a, b) => {
-                            const A = a.markSEJ === "-" ? (asc ? Infinity : -Infinity) : Number(a.markSEJ);
-                            const B = b.markSEJ === "-" ? (asc ? Infinity : -Infinity) : Number(b.markSEJ);
-                            return asc ? A - B : B - A;
-                        });
-                    }
-                    if (layakStatusSortState !== "none") {
-                        const asc = (layakStatusSortState === "asc");
-                        return rows.sort((a, b) => asc ? a.status.localeCompare(b.status) : b.status.localeCompare(a.status));
-                    }
-                    return rows; // asal
-                }
+    counts[bmCat][sejCat]++;
+    total++;
+  });
 
-                function drawLayakPage() {
-                    const body = document.getElementById("senaraiLayakBody");
-                    const info = document.getElementById("layakInfo");
-                    const label = document.getElementById("layakPageLabel");
-                    body.innerHTML = "";
+  const body = document.getElementById("silangBmSejBody");
+  if (!body) return;
+  body.innerHTML = "";
 
-                    const sortedRows = getSortedLayakRows();
-                    const total = sortedRows.length;
-                    let per = layakState.pageSize;
-                    if (!Number.isFinite(per)) per = total || 1;
+  if (total === 0) {
+    body.innerHTML = `
+      <tr>
+        <td colspan="5" class="px-3 py-2 text-center text-gray-500">
+          Tiada data BM/SEJ yang sah untuk jadual silang.
+        </td>
+      </tr>`;
+    return;
+  }
 
-                    const totalPages = Math.max(1, Math.ceil(total / per));
-                    if (layakState.page > totalPages) layakState.page = totalPages;
+  function row(label, c) {
+    const rowTotal = c.sejLulus + c.sejGagal + c.sejTH;
+    return `
+      <tr class="text-center">
+        <td class="px-3 py-2 text-left font-medium">${label}</td>
+        <td class="px-3 py-2 text-green-600">${c.sejLulus} (${((c.sejLulus/total)*100).toFixed(1)}%)</td>
+        <td class="px-3 py-2 text-red-600">${c.sejGagal} (${((c.sejGagal/total)*100).toFixed(1)}%)</td>
+        <td class="px-3 py-2">${c.sejTH} (${((c.sejTH/total)*100).toFixed(1)}%)</td>
+        <td class="px-3 py-2 font-bold text-blue-600 bg-yellow-50">${rowTotal} (${((rowTotal/total)*100).toFixed(1)}%)</td>
+      </tr>`;
+  }
 
-                    const start = (layakState.page - 1) * per;
-                    const end = Math.min(start + per, total);
-                    const pageRows = sortedRows.slice(start, end);
+  body.innerHTML += row("BM Lulus", counts.bmLulus);
+  body.innerHTML += row("BM Gagal", counts.bmGagal);
+  body.innerHTML += row("BM TH", counts.bmTH);
 
-                    pageRows.forEach((m, i) => {
-                        const statusHtml = m.status === "Layak" ?
-                            `<span class="text-green-600 font-medium">✔ Layak</span>` :
-                            `<span class="text-red-600 font-medium">✘ Tidak Layak</span>`;
+  // Jumlah keseluruhan
+  const jLulus = counts.bmLulus.sejLulus + counts.bmGagal.sejLulus + counts.bmTH.sejLulus;
+  const jGagal = counts.bmLulus.sejGagal + counts.bmGagal.sejGagal + counts.bmTH.sejGagal;
+  const jTH    = counts.bmLulus.sejTH    + counts.bmGagal.sejTH    + counts.bmTH.sejTH;
 
-                        body.innerHTML += `
-              <tr>
-                <td class="px-3 py-2 text-center">${start+i+1}</td>
-                <td class="px-3 py-2 text-left">${m.nama}</td>
-                <td class="px-3 py-2 text-center">${m.kelas}</td>
-                <td class="px-3 py-2 text-center">${m.markBM}</td>
-                <td class="px-3 py-2 text-center">${m.gredBM}</td>
-                <td class="px-3 py-2 text-center">${m.markSEJ}</td>
-                <td class="px-3 py-2 text-center">${m.gredSEJ}</td>
-                <td class="px-3 py-2 text-center">${statusHtml}</td>
-              </tr>`;
-                    });
+  body.innerHTML += `
+    <tr class="font-bold bg-yellow-100 text-center">
+      <td class="px-3 py-2 text-left">Jumlah</td>
+      <td class="px-3 py-2 text-green-600">${jLulus} (${((jLulus/total)*100).toFixed(1)}%)</td>
+      <td class="px-3 py-2 text-red-600">${jGagal} (${((jGagal/total)*100).toFixed(1)}%)</td>
+      <td class="px-3 py-2">${jTH} (${((jTH/total)*100).toFixed(1)}%)</td>
+      <td class="px-3 py-2 text-blue-600">${total} (100.0%)</td>
+    </tr>`;
+}
 
-                    info.textContent = total ?
-                        `Menunjukkan ${start+1} hingga ${end} daripada ${total} rekod` :
-                        `Tiada rekod ditemui`;
-                    label.textContent = `Halaman ${layakState.page} daripada ${totalPages}`;
 
-                    document.getElementById("layakPrev").disabled = (layakState.page <= 1);
-                    document.getElementById("layakNext").disabled = (layakState.page >= totalPages);
-                }
+// =======================================================
+// Jadual BM & SEJ (kemas: guna helper valid grade)
+// =======================================================
+function renderBmSejTable(data) {
+  const body = document.getElementById("bmSejBody");
+  if (!body) return;
+  body.innerHTML = "";
 
-                // Tukar page size
-                document.addEventListener("change", (e) => {
-                    if (e.target.id === "layakPageSize") {
-                        const v = e.target.value;
-                        layakState.pageSize = (v === "ALL") ? Number.POSITIVE_INFINITY : parseInt(v, 10);
-                        layakState.page = 1;
-                        drawLayakPage();
-                    }
-                });
+  ["BM", "SEJ"].forEach(subjek => {
+    const colGred = cariKolumGredSubjek(subjek);
+    if (!colGred) {
+      body.innerHTML += `
+        <tr>
+          <td colspan="16" class="px-3 py-2 text-center text-red-600">
+            Tiada data ${subjek} ditemui.
+          </td>
+        </tr>`;
+      return;
+    }
 
-                // Prev/Next
-                document.addEventListener("click", (e) => {
-                    if (e.target.id === "layakPrev" && layakState.page > 1) {
-                        layakState.page--;
-                        drawLayakPage();
-                    }
-                    if (e.target.id === "layakNext") {
-                        const total = layakState.rows.length;
-                        let per = layakState.pageSize;
-                        if (!Number.isFinite(per)) per = total || 1;
-                        const totalPages = Math.max(1, Math.ceil(total / per));
-                        if (layakState.page < totalPages) {
-                            layakState.page++;
-                            drawLayakPage();
-                        }
-                    }
-                });
+    const counts = Object.fromEntries(chartGradeLabels.map(g => [g, 0]));
+    let hadir = 0, th = 0, totalNilai = 0;
 
-                // ====== 3-laras sort (BM, SEJ, Status) ======
-                function resetLayakSort(except) {
-                    if (except !== "bm") {
-                        layakBmMarkahSortState = "none";
-                        document.getElementById("layakBmMarkahSortBtn").classList.remove("asc", "desc");
-                    }
-                    if (except !== "sej") {
-                        layakSejMarkahSortState = "none";
-                        document.getElementById("layakSejMarkahSortBtn").classList.remove("asc", "desc");
-                    }
-                    if (except !== "status") {
-                        layakStatusSortState = "none";
-                        document.getElementById("layakStatusSortBtn").classList.remove("asc", "desc");
-                    }
-                }
+    data.forEach(r => {
+      const g = norm(r[colGred] || "");
+      if (isValidGrade(g)) {
+        counts[g] = (counts[g] || 0) + 1;
+        hadir++;
+        totalNilai += gradeValueMapping[g];
+      } else if (g === "TH") {
+        th++;
+      }
+    });
 
-                document.addEventListener("click", (e) => {
-                    if (e.target.closest("#layakBmMarkahSortBtn")) {
-                        const btn = document.getElementById("layakBmMarkahSortBtn");
-                        if (layakBmMarkahSortState === "none") {
-                            layakBmMarkahSortState = "asc";
-                            btn.classList.add("asc");
-                        } else if (layakBmMarkahSortState === "asc") {
-                            layakBmMarkahSortState = "desc";
-                            btn.classList.remove("asc");
-                            btn.classList.add("desc");
-                        } else {
-                            layakBmMarkahSortState = "none";
-                            btn.classList.remove("asc", "desc");
-                        }
-                        resetLayakSort("bm");
-                        drawLayakPage();
-                    }
-                    if (e.target.closest("#layakSejMarkahSortBtn")) {
-                        const btn = document.getElementById("layakSejMarkahSortBtn");
-                        if (layakSejMarkahSortState === "none") {
-                            layakSejMarkahSortState = "asc";
-                            btn.classList.add("asc");
-                        } else if (layakSejMarkahSortState === "asc") {
-                            layakSejMarkahSortState = "desc";
-                            btn.classList.remove("asc");
-                            btn.classList.add("desc");
-                        } else {
-                            layakSejMarkahSortState = "none";
-                            btn.classList.remove("asc", "desc");
-                        }
-                        resetLayakSort("sej");
-                        drawLayakPage();
-                    }
-                    if (e.target.closest("#layakStatusSortBtn")) {
-                        const btn = document.getElementById("layakStatusSortBtn");
-                        if (layakStatusSortState === "none") {
-                            layakStatusSortState = "asc";
-                            btn.classList.add("asc");
-                        } else if (layakStatusSortState === "asc") {
-                            layakStatusSortState = "desc";
-                            btn.classList.remove("asc");
-                            btn.classList.add("desc");
-                        } else {
-                            layakStatusSortState = "none";
-                            btn.classList.remove("asc", "desc");
-                        }
-                        resetLayakSort("status");
-                        drawLayakPage();
-                    }
-                });
+    const lulus = hadir - (counts["G"] || 0);
+    const gagal = counts["G"] || 0;
+    const pLulus = hadir ? ((lulus / hadir) * 100).toFixed(1) : "0.0";
+    const pGagal = hadir ? ((gagal / hadir) * 100).toFixed(1) : "0.0";
+    const gpmp = hadir ? (totalNilai / hadir).toFixed(2) : "--";
 
-                // Prev/Next
-                document.addEventListener("click", (e) => {
-                    if (e.target.id === "layakPrev" && layakState.page > 1) {
-                        layakState.page--;
-                        drawLayakPage();
-                    }
-                    if (e.target.id === "layakNext") {
-                        const total = layakState.rows.length;
-                        let per = layakState.pageSize;
-                        if (!Number.isFinite(per)) per = total || 1;
-                        const totalPages = Math.max(1, Math.ceil(total / per));
-                        if (layakState.page < totalPages) {
-                            layakState.page++;
-                            drawLayakPage();
-                        }
-                    }
-                });
+    body.innerHTML += `
+      <tr class="text-center">
+        <td class="px-3 py-2 font-medium text-left">
+          ${subjectNameMap[subjek] || subjek}
+        </td>
+        <td class="px-3 py-2 text-blue-600">${hadir}</td>
+        <td class="px-3 py-2">${th}</td>
+        ${chartGradeLabels.map(g=>{
+          const cls=(["A+","A","A-"].includes(g))?"bg-green-50":
+                    (["B+","B"].includes(g))?"bg-yellow-50":"bg-red-50";
+          return `<td class="px-3 py-2 ${cls}">${counts[g] || 0}</td>`;
+        }).join("")}
+        <td class="px-3 py-2 text-green-600 font-medium">${pLulus}%</td>
+        <td class="px-3 py-2 text-red-600 font-medium">${pGagal}%</td>
+        <td class="px-3 py-2 text-purple-600 font-bold">${gpmp}</td>
+      </tr>`;
+  });
+}
+
+
+// =======================================================
+// Senarai Murid Layak Sijil (Tab 3) — Paging & Sort
+// =======================================================
+const layakState = {
+  rows: [],
+  rowsOriginal: [],
+  page: 1,
+  pageSize: 5
+};
+
+let layakBmMarkahSortState = "none";
+let layakSejMarkahSortState = "none";
+let layakStatusSortState = "none";
+
+function getSortedLayakRows() {
+  let rows = [...layakState.rows];
+
+  if (layakBmMarkahSortState !== "none") {
+    const asc = (layakBmMarkahSortState === "asc");
+    return rows.sort((a, b) => {
+      const A = (a.markBM === "-" ? (asc ? Infinity : -Infinity) : Number(a.markBM));
+      const B = (b.markBM === "-" ? (asc ? Infinity : -Infinity) : Number(b.markBM));
+      return asc ? A - B : B - A;
+    });
+  }
+
+  if (layakSejMarkahSortState !== "none") {
+    const asc = (layakSejMarkahSortState === "asc");
+    return rows.sort((a, b) => {
+      const A = (a.markSEJ === "-" ? (asc ? Infinity : -Infinity) : Number(a.markSEJ));
+      const B = (b.markSEJ === "-" ? (asc ? Infinity : -Infinity) : Number(b.markSEJ));
+      return asc ? A - B : B - A;
+    });
+  }
+
+  if (layakStatusSortState !== "none") {
+    const asc = (layakStatusSortState === "asc");
+    return rows.sort((a, b) =>
+      asc ? a.status.localeCompare(b.status) : b.status.localeCompare(a.status)
+    );
+  }
+
+  return rows;
+}
+
+function drawLayakPage() {
+  const body  = document.getElementById("senaraiLayakBody");
+  const info  = document.getElementById("layakInfo");
+  const label = document.getElementById("layakPageLabel");
+  if (!body || !info || !label) return;
+
+  body.innerHTML = "";
+
+  const sortedRows = getSortedLayakRows();
+  const total = sortedRows.length;
+
+  let per = layakState.pageSize;
+  if (!Number.isFinite(per)) per = total || 1;
+
+  const totalPages = Math.max(1, Math.ceil(total / per));
+  if (layakState.page > totalPages) layakState.page = totalPages;
+
+  const start = (layakState.page - 1) * per;
+  const end = Math.min(start + per, total);
+  const pageRows = sortedRows.slice(start, end);
+
+  pageRows.forEach((m, i) => {
+    const statusHtml =
+      (m.status === "Layak")
+        ? `<span class="text-green-600 font-medium">✔ Layak</span>`
+        : (m.status === "Tidak Layak")
+          ? `<span class="text-red-600 font-medium">✘ Tidak Layak</span>`
+          : `<span class="text-gray-500 font-medium">Tiada Data</span>`;
+
+    body.innerHTML += `
+      <tr>
+        <td class="px-3 py-2 text-center">${start + i + 1}</td>
+        <td class="px-3 py-2 text-left">${m.nama}</td>
+        <td class="px-3 py-2 text-center">${m.kelas}</td>
+        <td class="px-3 py-2 text-center">${m.markBM}</td>
+        <td class="px-3 py-2 text-center">${m.gredBM}</td>
+        <td class="px-3 py-2 text-center">${m.markSEJ}</td>
+        <td class="px-3 py-2 text-center">${m.gredSEJ}</td>
+        <td class="px-3 py-2 text-center">${statusHtml}</td>
+      </tr>`;
+  });
+
+  info.textContent = total
+    ? `Menunjukkan ${start + 1} hingga ${end} daripada ${total} rekod`
+    : `Tiada rekod ditemui`;
+
+  label.textContent = `Halaman ${layakState.page} daripada ${totalPages}`;
+
+  const prevBtn = document.getElementById("layakPrev");
+  const nextBtn = document.getElementById("layakNext");
+  if (prevBtn) prevBtn.disabled = (layakState.page <= 1);
+  if (nextBtn) nextBtn.disabled = (layakState.page >= totalPages);
+}
+
+
+// Tukar page size
+document.addEventListener("change", (e) => {
+  if (e.target.id === "layakPageSize") {
+    const v = e.target.value;
+    layakState.pageSize = (v === "ALL") ? Number.POSITIVE_INFINITY : parseInt(v, 10);
+    layakState.page = 1;
+    drawLayakPage();
+  }
+});
+
+// Prev/Next (✅ hanya sekali — jangan duplicate)
+document.addEventListener("click", (e) => {
+  if (e.target.id === "layakPrev" && layakState.page > 1) {
+    layakState.page--;
+    drawLayakPage();
+  }
+  if (e.target.id === "layakNext") {
+    const total = layakState.rows.length;
+    let per = layakState.pageSize;
+    if (!Number.isFinite(per)) per = total || 1;
+    const totalPages = Math.max(1, Math.ceil(total / per));
+    if (layakState.page < totalPages) {
+      layakState.page++;
+      drawLayakPage();
+    }
+  }
+});
+
+
+// ====== 3-laras sort (BM, SEJ, Status) ======
+function resetLayakSort(except) {
+  if (except !== "bm") {
+    layakBmMarkahSortState = "none";
+    document.getElementById("layakBmMarkahSortBtn")?.classList.remove("asc", "desc");
+  }
+  if (except !== "sej") {
+    layakSejMarkahSortState = "none";
+    document.getElementById("layakSejMarkahSortBtn")?.classList.remove("asc", "desc");
+  }
+  if (except !== "status") {
+    layakStatusSortState = "none";
+    document.getElementById("layakStatusSortBtn")?.classList.remove("asc", "desc");
+  }
+}
+
+document.addEventListener("click", (e) => {
+  if (e.target.closest("#layakBmMarkahSortBtn")) {
+    const btn = document.getElementById("layakBmMarkahSortBtn");
+    if (layakBmMarkahSortState === "none") {
+      layakBmMarkahSortState = "asc";
+      btn.classList.add("asc");
+      btn.classList.remove("desc");
+    } else if (layakBmMarkahSortState === "asc") {
+      layakBmMarkahSortState = "desc";
+      btn.classList.remove("asc");
+      btn.classList.add("desc");
+    } else {
+      layakBmMarkahSortState = "none";
+      btn.classList.remove("asc", "desc");
+    }
+    resetLayakSort("bm");
+    drawLayakPage();
+  }
+
+  if (e.target.closest("#layakSejMarkahSortBtn")) {
+    const btn = document.getElementById("layakSejMarkahSortBtn");
+    if (layakSejMarkahSortState === "none") {
+      layakSejMarkahSortState = "asc";
+      btn.classList.add("asc");
+      btn.classList.remove("desc");
+    } else if (layakSejMarkahSortState === "asc") {
+      layakSejMarkahSortState = "desc";
+      btn.classList.remove("asc");
+      btn.classList.add("desc");
+    } else {
+      layakSejMarkahSortState = "none";
+      btn.classList.remove("asc", "desc");
+    }
+    resetLayakSort("sej");
+    drawLayakPage();
+  }
+
+  if (e.target.closest("#layakStatusSortBtn")) {
+    const btn = document.getElementById("layakStatusSortBtn");
+    if (layakStatusSortState === "none") {
+      layakStatusSortState = "asc";
+      btn.classList.add("asc");
+      btn.classList.remove("desc");
+    } else if (layakStatusSortState === "asc") {
+      layakStatusSortState = "desc";
+      btn.classList.remove("asc");
+      btn.classList.add("desc");
+    } else {
+      layakStatusSortState = "none";
+      btn.classList.remove("asc", "desc");
+    }
+    resetLayakSort("status");
+    drawLayakPage();
+  }
+});
+
 
                 // ✅ Fungsi Combat Zone - Tab 4 
                 function getCombatZoneCategory(grade, gps) {
@@ -4226,7 +4272,7 @@ function generateOverallAnalysis() {
                 <html>
                   <head><title>Analisis Combat Zone</title>${style}</head>
                   <body>
-                    <img src="https://leepie.github.io/kbs/KBs-LOGO.png"
+                    <img src="https://leepie.github.io/kbs/KBs-LOGO-FINAL.png"
                          alt="Logo Sekolah" style="width:80px; display:block; margin:auto;">
                     <h2>SMK KPG BAHAGIA, TELUK INTAN, PERAK DARUL REDZUAN</h2>
                     <h3>Analisis Combat Zone (Semua Kategori)</h3>
