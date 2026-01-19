@@ -2881,351 +2881,323 @@ function generateOverallAnalysis() {
                     }
                     renderSubjectTable();
                 });
-/* =========================================================
-   TAB 2: Analisis Mata Pelajaran
-   - Pecahan Kelas + Sort GPMP
-   - Senarai Murid + Paging + Sort Markah & Gred ✅
-   ========================================================= */
 
-// ============ GLOBAL STATES (WAJIB ADA) ============
-let gpmpKelasSortState = "none";  // "none" | "asc" | "desc"
-let markahSortState    = "none";  // "none" | "asc" | "desc"
-let gredSortState      = "none";  // "none" | "asc" | "desc"
+                /* ========= TAB 2: Pecahan Kelas & Senarai Murid ========= */
+                function generateSubjectCards() {
+                    const kelasTerpilih = document.getElementById('kelasFilterMP')?.value || "";
+                    const subjekCode = document.getElementById('subjekFilter')?.value || "";
 
-let pecahanKelasRowsOriginal = [];
-let pecahanKelasRowsCurrent  = [];
+                    // sembunyikan kad dahulu
+                    const cardKelas = document.getElementById('pecahanKelasCard');
+                    const cardSenarai = document.getElementById('senaraiMuridCard');
+                    if (cardKelas) cardKelas.classList.add('hidden');
+                    if (cardSenarai) cardSenarai.classList.add('hidden');
+                    if (!subjekCode) {
+                        return;
+                    }
 
-let senaraiState = {
-  rows: [],
-  rowsOriginal: [],
-  page: 1,
-  pageSize: 5
-};
+                    let data = cachedData || [];
+                    const kelasHeader = cariKolum("kelas");
+                    if (kelasTerpilih && kelasTerpilih !== "SEMUA KELAS") {
+                        data = data.filter(r => (r[kelasHeader] || "") === kelasTerpilih);
+                    }
 
+                    // RESET sort GPMP Kelas
+                    gpmpKelasSortState = "none";
+                    document.getElementById('gpmpKelasSortBtn')?.classList.remove('asc', 'desc');
 
-// ===================================================
-// 1) Jana Analisis Tab 2
-// ===================================================
-function generateSubjectCards() {
-  const kelasTerpilih = document.getElementById('kelasFilterMP')?.value || "";
-  const subjekCode    = document.getElementById('subjekFilter')?.value || "";
+                    renderPecahanKelasTable(data, subjekCode);
+                    if (cardKelas) cardKelas.classList.remove('hidden');
 
-  // sembunyikan kad dahulu
-  const cardKelas   = document.getElementById('pecahanKelasCard');
-  const cardSenarai = document.getElementById('senaraiMuridCard');
+                    // Reset sorting & paging Senarai Murid
+                    markahSortState = "none";
+                    gredSortState = "none";
+                    document.getElementById('senaraiMarkahSortBtn')?.classList.remove('asc', 'desc');
+                    document.getElementById('senaraiGredSortBtn')?.classList.remove('asc', 'desc');
 
-  if (cardKelas)   cardKelas.classList.add('hidden');
-  if (cardSenarai) cardSenarai.classList.add('hidden');
+                    renderSenaraiMuridTable(data, subjekCode);
+                    if (cardSenarai) cardSenarai.classList.remove('hidden');
+                }
 
-  if (!subjekCode) return;
+                function renderPecahanKelasTable(data, subjekCode) {
+                    const kelasHeader = cariKolum("kelas");
+                    const colGred = cariKolumGredSubjek(subjekCode);
+                    const body = document.getElementById('pecahanKelasBody');
+                    body.innerHTML = "";
 
-  let data = cachedData || [];
-  const kelasHeader = cariKolum("kelas");
-  if (kelasTerpilih && kelasTerpilih !== "SEMUA KELAS") {
-    data = data.filter(r => (r[kelasHeader] || "") === kelasTerpilih);
-  }
+                    if (!colGred) {
+                        body.innerHTML = `<tr><td class="px-3 py-3 text-sm text-red-600" colspan="16">
+                  Tiada kolum gred ditemui untuk subjek dipilih.</td></tr>`;
+                        return;
+                    }
 
-  // RESET sort GPMP Kelas
-  gpmpKelasSortState = "none";
-  document.getElementById('gpmpKelasSortBtn')?.classList.remove('asc', 'desc');
+                    // Senarai kelas unik
+                    const kelasSet = new Set();
+                    data.forEach(r => {
+                        const k = (r[kelasHeader] || "").trim();
+                        if (k && k !== "1") kelasSet.add(k);
+                    });
+                    const kelasList = [...kelasSet].sort((a, b) => a.localeCompare(b, 'ms', {
+                        numeric: true
+                    }));
 
-  renderPecahanKelasTable(data, subjekCode);
-  if (cardKelas) cardKelas.classList.remove('hidden');
+                    // Struktur asas untuk setiap kelas
+                    const rows = kelasList.map(k => ({
+                        kelas: k,
+                        hadir: 0,
+                        th: 0,
+                        totalNilai: 0,
+                        counts: Object.fromEntries(chartGradeLabels.map(g => [g, 0]))
+                    }));
 
-  // Reset sorting & paging Senarai Murid
-  markahSortState = "none";
-  gredSortState   = "none";
-  document.getElementById('senaraiMarkahSortBtn')?.classList.remove('asc', 'desc');
-  document.getElementById('senaraiGredSortBtn')?.classList.remove('asc', 'desc');
+                    const rowMap = Object.fromEntries(rows.map(r => [r.kelas, r]));
 
-  // Reset page size ikut dropdown (kalau user dah tukar)
-  const ps = document.getElementById('senaraiPageSize')?.value;
-  if (ps) {
-    senaraiState.pageSize = (ps === "ALL") ? Number.POSITIVE_INFINITY : parseInt(ps, 10);
-  }
+                    // Isikan data
+                    data.forEach(r => {
+                        const k = (r[kelasHeader] || "").trim();
+                        if (k === "1") return;
+                        const g = (r[colGred] || "").toUpperCase();
+                        const row = rowMap[k];
+                        if (!row) return;
+                        if (gradeValueMapping.hasOwnProperty(g)) {
+                            row.hadir++;
+                            row.counts[g]++;
+                            row.totalNilai += gradeValueMapping[g];
+                        } else if (g === "TH") {
+                            row.th++;
+                        }
+                    });
 
-  renderSenaraiMuridTable(data, subjekCode);
-  if (cardSenarai) cardSenarai.classList.remove('hidden');
-}
+                    // Kira GPMP
+                    rows.forEach(r => r._gpmp = r.hadir ? (r.totalNilai / r.hadir) : null);
 
+                    // ✅ Tapis hanya kelas yang ada murid ambil subjek ini
+                    const rowsWithData = rows.filter(r => r.hadir > 0 || r.th > 0);
 
-// ===================================================
-// 2) Pecahan Kelas
-// ===================================================
-function renderPecahanKelasTable(data, subjekCode) {
-  const kelasHeader = cariKolum("kelas");
-  const colGred = cariKolumGredSubjek(subjekCode);
-  const body = document.getElementById('pecahanKelasBody');
-  body.innerHTML = "";
+                    if (rowsWithData.length === 0) {
+                        body.innerHTML = `<tr><td colspan="16" class="px-3 py-3 text-sm text-gray-500 text-center">
+                  Tiada kelas mengambil subjek ini.
+                </td></tr>`;
+                        return;
+                    }
 
-  if (!colGred) {
-    body.innerHTML = `<tr><td class="px-3 py-3 text-sm text-red-600" colspan="16">
-      Tiada kolum gred ditemui untuk subjek dipilih.</td></tr>`;
-    return;
-  }
+                    // Simpan state asal & semasa
+                    pecahanKelasRowsOriginal = [...rowsWithData];
+                    pecahanKelasRowsCurrent = [...rowsWithData];
 
-  // Senarai kelas unik
-  const kelasSet = new Set();
-  data.forEach(r => {
-    const k = (r[kelasHeader] || "").trim();
-    if (k && k !== "1") kelasSet.add(k);
-  });
+                    drawPecahanKelasBody();
+                }
 
-  const kelasList = [...kelasSet].sort((a, b) => a.localeCompare(b, 'ms', { numeric: true }));
+                function drawPecahanKelasBody() {
+                    const body = document.getElementById('pecahanKelasBody');
+                    body.innerHTML = "";
 
-  // Struktur asas untuk setiap kelas
-  const rows = kelasList.map(k => ({
-    kelas: k,
-    hadir: 0,
-    th: 0,
-    totalNilai: 0,
-    counts: Object.fromEntries(chartGradeLabels.map(g => [g, 0]))
-  }));
+                    let arr = [...pecahanKelasRowsCurrent];
+                    if (gpmpKelasSortState === "asc") {
+                        arr.sort((a, b) => ((a._gpmp ?? 99) - (b._gpmp ?? 99)));
+                    } else if (gpmpKelasSortState === "desc") {
+                        arr.sort((a, b) => ((b._gpmp ?? -1) - (a._gpmp ?? -1)));
+                    } else {
+                        arr = [...pecahanKelasRowsOriginal];
+                    }
 
-  const rowMap = Object.fromEntries(rows.map(r => [r.kelas, r]));
+                    arr.forEach(r => {
+                        const lulus = r.hadir - (r.counts["G"] || 0);
+                        const gagal = (r.counts["G"] || 0);
+                        const pLulus = r.hadir ? ((lulus / r.hadir) * 100).toFixed(1) : "0.0";
+                        const pGagal = r.hadir ? ((gagal / r.hadir) * 100).toFixed(1) : "0.0";
+                        const gpmpStr = (r._gpmp != null) ? r._gpmp.toFixed(2) : "--";
 
-  // Isikan data
-  data.forEach(r => {
-    const k = (r[kelasHeader] || "").trim();
-    if (k === "1") return;
-    const g = (r[colGred] || "").toUpperCase();
-    const row = rowMap[k];
-    if (!row) return;
+                        body.innerHTML += `
+                  <tr class="text-gray-800 text-center">
+                    <td class="px-2.5 py-2 text-left font-medium">${r.kelas}</td>
+                    <td class="px-2.5 py-2 text-blue-600 font-medium">${r.hadir}</td>
+                    <td class="px-2.5 py-2">${r.th}</td>
+                    ${["A+","A","A-","B+","B","C+","C","D","E","G"].map(g=>{
+                      const cls=(g==="A+"||g==="A"||g==="A-")?"bg-green-50":(g==="B+"||g==="B")?"bg-yellow-50":"bg-red-50";
+                      return `<td class="px-2.5 py-2 ${cls}">${r.counts[g]||0}</td>`;
+                    }).join("")}
+                    <td class="px-2.5 py-2 text-green-600 font-medium">${pLulus}%</td>
+                    <td class="px-2.5 py-2 text-red-600 font-medium">${pGagal}%</td>
+                    <td class="px-2.5 py-2 text-purple-600 font-bold">${gpmpStr}</td>
+                  </tr>`;
+                    });
+                }
 
-    if (gradeValueMapping.hasOwnProperty(g)) {
-      row.hadir++;
-      row.counts[g]++;
-      row.totalNilai += gradeValueMapping[g];
-    } else if (g === "TH") {
-      row.th++;
-    }
-  });
+                // Toggle sort GPMP Kad Pecahan Kelas
+                document.addEventListener('click', (e) => {
+                    if (e.target.closest('#gpmpKelasSortBtn')) {
+                        const btn = document.getElementById('gpmpKelasSortBtn');
+                        if (gpmpKelasSortState === "none") {
+                            gpmpKelasSortState = "asc";
+                            btn.classList.remove('desc');
+                            btn.classList.add('asc');
+                        } else if (gpmpKelasSortState === "asc") {
+                            gpmpKelasSortState = "desc";
+                            btn.classList.remove('asc');
+                            btn.classList.add('desc');
+                        } else {
+                            gpmpKelasSortState = "none";
+                            btn.classList.remove('asc', 'desc');
+                        }
+                        drawPecahanKelasBody();
+                    }
+                });
 
-  // Kira GPMP
-  rows.forEach(r => r._gpmp = r.hadir ? (r.totalNilai / r.hadir) : null);
+                /* ======== Kad Senarai Murid (Tab 2) ======== */
+                function renderSenaraiMuridTable(data, subjekCode) {
+                    const namaHeader = cariKolum("nama");
+                    const kelasHeader = cariKolum("kelas");
+                    const colGred = cariKolumGredSubjek(subjekCode);
+                    const colMark = cariKolumMarkahSubjek(subjekCode); // mungkin tiada dalam CSV
 
-  // ✅ Tapis hanya kelas yang ada murid ambil subjek ini
-  const rowsWithData = rows.filter(r => r.hadir > 0 || r.th > 0);
+                    const rows = [];
+                    data.forEach(r => {
+                        const kelas = (r[kelasHeader] || "").trim();
+                        if (kelas === "1") return; // buang kelas '1'
+                        const gred = (r[colGred] || "").toUpperCase();
+                        if (!gradeValueMapping.hasOwnProperty(gred)) return;
+                        const markahRaw = colMark ? (r[colMark] || "") : "";
+                        const markah = markahRaw === "" ? null : Number(markahRaw);
+                        rows.push({
+                            nama: r[namaHeader] || "",
+                            kelas,
+                            markah,
+                            gred
+                        });
+                    });
 
-  if (rowsWithData.length === 0) {
-    body.innerHTML = `<tr><td colspan="16" class="px-3 py-3 text-sm text-gray-500 text-center">
-      Tiada kelas mengambil subjek ini.
-    </td></tr>`;
-    return;
-  }
+                    // Simpan & lukis halaman pertama
+                    senaraiState.rows = rows;
+                    senaraiState.rowsOriginal = [...rows];
+                    senaraiState.page = 1;
+                    drawSenaraiMuridPage();
+                }
 
-  // Simpan state asal & semasa
-  pecahanKelasRowsOriginal = [...rowsWithData];
-  pecahanKelasRowsCurrent  = [...rowsWithData];
+                // guna sort state -> dapatkan data disusun
+                function getSortedSenaraiRows() {
+                    // Jika sort Markah aktif, keutamaan di sini; jika tidak, lihat sort Gred
+                    if (markahSortState !== "none") {
+                        const asc = (markahSortState === "asc");
+                        return [...senaraiState.rows].sort((a, b) => {
+                            const A = (a.markah == null || Number.isNaN(a.markah)) ? (asc ? Infinity : -Infinity) : a.markah;
+                            const B = (b.markah == null || Number.isNaN(b.markah)) ? (asc ? Infinity : -Infinity) : b.markah;
+                            return asc ? (A - B) : (B - A);
+                        });
+                    }
+                    if (gredSortState !== "none") {
+                        const asc = (gredSortState === "asc");
+                        return [...senaraiState.rows].sort((a, b) => {
+                            const A = gradeValueMapping[a.gred] ?? 999;
+                            const B = gradeValueMapping[b.gred] ?? 999;
+                            return asc ? (A - B) : (B - A);
+                        });
+                    }
+                    // Asal
+                    return [...senaraiState.rowsOriginal];
+                }
 
-  drawPecahanKelasBody();
-}
+                function drawSenaraiMuridPage() {
+                    const body = document.getElementById('senaraiMuridBody');
+                    const info = document.getElementById('senaraiInfo');
+                    const label = document.getElementById('senaraiPageLabel');
 
-function drawPecahanKelasBody() {
-  const body = document.getElementById('pecahanKelasBody');
-  body.innerHTML = "";
+                    body.innerHTML = "";
 
-  let arr = [...pecahanKelasRowsCurrent];
+                    const sortedRows = getSortedSenaraiRows();
+                    const total = sortedRows.length;
 
-  if (gpmpKelasSortState === "asc") {
-    arr.sort((a, b) => ((a._gpmp ?? 99) - (b._gpmp ?? 99)));
-  } else if (gpmpKelasSortState === "desc") {
-    arr.sort((a, b) => ((b._gpmp ?? -1) - (a._gpmp ?? -1)));
-  } else {
-    arr = [...pecahanKelasRowsOriginal];
-  }
+                    let per = senaraiState.pageSize;
+                    if (!Number.isFinite(per)) per = total || 1; // jika "Semua"
 
-  arr.forEach(r => {
-    const lulus = r.hadir - (r.counts["G"] || 0);
-    const gagal = (r.counts["G"] || 0);
-    const pLulus = r.hadir ? ((lulus / r.hadir) * 100).toFixed(1) : "0.0";
-    const pGagal = r.hadir ? ((gagal / r.hadir) * 100).toFixed(1) : "0.0";
-    const gpmpStr = (r._gpmp != null) ? r._gpmp.toFixed(2) : "--";
+                    const totalPages = Math.max(1, Math.ceil(total / per));
+                    if (senaraiState.page > totalPages) senaraiState.page = totalPages;
 
-    body.innerHTML += `
-      <tr class="text-gray-800 text-center">
-        <td class="px-2.5 py-2 text-left font-medium">${r.kelas}</td>
-        <td class="px-2.5 py-2 text-blue-600 font-medium">${r.hadir}</td>
-        <td class="px-2.5 py-2">${r.th}</td>
-        ${["A+","A","A-","B+","B","C+","C","D","E","G"].map(g=>{
-          const cls=(g==="A+"||g==="A"||g==="A-")?"bg-green-50":(g==="B+"||g==="B")?"bg-yellow-50":"bg-red-50";
-          return `<td class="px-2.5 py-2 ${cls}">${r.counts[g]||0}</td>`;
-        }).join("")}
-        <td class="px-2.5 py-2 text-green-600 font-medium">${pLulus}%</td>
-        <td class="px-2.5 py-2 text-red-600 font-medium">${pGagal}%</td>
-        <td class="px-2.5 py-2 text-purple-600 font-bold">${gpmpStr}</td>
-      </tr>`;
-  });
-}
+                    const start = (senaraiState.page - 1) * per;
+                    const end = Math.min(start + per, total);
+                    const pageRows = sortedRows.slice(start, end);
 
+                    const gradeCls = (g) => {
+                        if (["A+", "A", "A-"].includes(g)) return "text-green-600";
+                        if (["B+", "B"].includes(g)) return "text-yellow-600";
+                        if (["C+", "C"].includes(g)) return "text-orange-500";
+                        return "text-red-600";
+                    };
 
-// ===================================================
-// 3) Senarai Murid (Tab 2)
-// ===================================================
-function renderSenaraiMuridTable(data, subjekCode) {
-  const namaHeader  = cariKolum("nama");
-  const kelasHeader = cariKolum("kelas");
-  const colGred     = cariKolumGredSubjek(subjekCode);
-  const colMark     = cariKolumMarkahSubjek(subjekCode); // mungkin tiada dalam CSV
+                    pageRows.forEach((r, i) => {
+                        body.innerHTML += `
+                  <tr>
+                    <td class="px-3 py-2 text-center">${start + i + 1}</td>
+                    <td class="px-3 py-2 text-left">${r.nama}</td>
+                    <td class="px-3 py-2 text-center">${r.kelas}</td>
+                    <td class="px-3 py-2 text-center">${(r.markah==null||Number.isNaN(r.markah))? "-" : r.markah}</td>
+                    <td class="px-3 py-2 text-center ${gradeCls(r.gred)} font-medium">${r.gred}</td>
+                  </tr>`;
+                    });
 
-  const rows = [];
-  data.forEach(r => {
-    const kelas = (r[kelasHeader] || "").trim();
-    if (kelas === "1") return; // buang kelas '1'
+                    info.textContent = total ?
+                        `Menunjukkan ${total ? (start+1) : 0} hingga ${end} daripada ${total} rekod` :
+                        `Tiada rekod ditemui`;
+                    label.textContent = `Halaman ${senaraiState.page} daripada ${totalPages}`;
 
-    const gred = (r[colGred] || "").toUpperCase();
-    if (!gradeValueMapping.hasOwnProperty(gred)) return;
+                    // enable/disable prev/next
+                    const prevBtn = document.getElementById('senaraiPrev');
+                    const nextBtn = document.getElementById('senaraiNext');
+                    if (senaraiState.page <= 1) {
+                        prevBtn.classList.add('opacity-50', 'pointer-events-none', 'cursor-not-allowed');
+                    } else {
+                        prevBtn.classList.remove('opacity-50', 'pointer-events-none', 'cursor-not-allowed');
+                    }
+                    if (senaraiState.page >= totalPages) {
+                        nextBtn.classList.add('opacity-50', 'pointer-events-none', 'cursor-not-allowed');
+                    } else {
+                        nextBtn.classList.remove('opacity-50', 'pointer-events-none', 'cursor-not-allowed');
+                    }
+                }
 
-    const markahRaw = colMark ? (r[colMark] || "") : "";
-    const markah = (markahRaw === "" || markahRaw == null) ? null : Number(markahRaw);
+                // Page size change (termasuk "Semua")
+                document.addEventListener('change', (e) => {
+                    if (e.target && e.target.id === 'senaraiPageSize') {
+                        const v = e.target.value;
+                        senaraiState.pageSize = (v === "ALL") ? Number.POSITIVE_INFINITY : parseInt(v, 10);
+                        senaraiState.page = 1;
+                        drawSenaraiMuridPage();
+                    }
+                });
+                // Prev/Next nav
+                document.addEventListener('click', (e) => {
+                    if (e.target && e.target.id === 'senaraiPrev') {
+                        if (senaraiState.page > 1) {
+                            senaraiState.page--;
+                            drawSenaraiMuridPage();
+                        }
+                    }
+                    if (e.target && e.target.id === 'senaraiNext') {
+                        const total = getSortedSenaraiRows().length;
+                        let per = senaraiState.pageSize;
+                        if (!Number.isFinite(per)) per = total || 1;
+                        const totalPages = Math.max(1, Math.ceil(total / per));
+                        if (senaraiState.page < totalPages) {
+                            senaraiState.page++;
+                            drawSenaraiMuridPage();
+                        }
+                    }
+                });
 
-    rows.push({
-      nama: r[namaHeader] || "",
-      kelas,
-      markah,
-      gred
-    });
-  });
-
-  // Simpan & lukis halaman pertama
-  senaraiState.rows = rows;
-  senaraiState.rowsOriginal = [...rows];
-  senaraiState.page = 1;
-
-  drawSenaraiMuridPage();
-}
-
-// guna sort state -> dapatkan data disusun
-function getSortedSenaraiRows() {
-  // Jika sort Markah aktif, keutamaan di sini; jika tidak, lihat sort Gred
-  if (markahSortState !== "none") {
-    const asc = (markahSortState === "asc");
-    return [...senaraiState.rows].sort((a, b) => {
-      const A = (a.markah == null || Number.isNaN(a.markah)) ? (asc ? Infinity : -Infinity) : a.markah;
-      const B = (b.markah == null || Number.isNaN(b.markah)) ? (asc ? Infinity : -Infinity) : b.markah;
-      return asc ? (A - B) : (B - A);
-    });
-  }
-
-  if (gredSortState !== "none") {
-    const asc = (gredSortState === "asc");
-    return [...senaraiState.rows].sort((a, b) => {
-      // gradeValueMapping: A+=1, A=2 ... G=10 (atau ikut mapping Cikgu)
-      const A = gradeValueMapping[a.gred] ?? 999;
-      const B = gradeValueMapping[b.gred] ?? 999;
-      return asc ? (A - B) : (B - A);
-    });
-  }
-
-  // Asal
-  return [...senaraiState.rowsOriginal];
-}
-
-function drawSenaraiMuridPage() {
-  const body  = document.getElementById('senaraiMuridBody');
-  const info  = document.getElementById('senaraiInfo');
-  const label = document.getElementById('senaraiPageLabel');
-
-  if (!body) return;
-  body.innerHTML = "";
-
-  const sortedRows = getSortedSenaraiRows();
-  const total = sortedRows.length;
-
-  let per = senaraiState.pageSize;
-  if (!Number.isFinite(per)) per = total || 1; // jika "Semua"
-
-  const totalPages = Math.max(1, Math.ceil(total / per));
-  if (senaraiState.page > totalPages) senaraiState.page = totalPages;
-
-  const start = (senaraiState.page - 1) * per;
-  const end = Math.min(start + per, total);
-  const pageRows = sortedRows.slice(start, end);
-
-  const gradeCls = (g) => {
-    if (["A+", "A", "A-"].includes(g)) return "text-green-600";
-    if (["B+", "B"].includes(g)) return "text-yellow-600";
-    if (["C+", "C"].includes(g)) return "text-orange-500";
-    return "text-red-600";
-  };
-
-  pageRows.forEach((r, i) => {
-    body.innerHTML += `
-      <tr>
-        <td class="px-3 py-2 text-center">${start + i + 1}</td>
-        <td class="px-3 py-2 text-left">${r.nama}</td>
-        <td class="px-3 py-2 text-center">${r.kelas}</td>
-        <td class="px-3 py-2 text-center">${(r.markah==null||Number.isNaN(r.markah)) ? "-" : r.markah}</td>
-        <td class="px-3 py-2 text-center ${gradeCls(r.gred)} font-medium">${r.gred}</td>
-      </tr>`;
-  });
-
-  if (info) {
-    info.textContent = total
-      ? `Menunjukkan ${total ? (start + 1) : 0} hingga ${end} daripada ${total} rekod`
-      : `Tiada rekod ditemui`;
-  }
-
-  if (label) label.textContent = `Halaman ${senaraiState.page} daripada ${totalPages}`;
-
-  // enable/disable prev/next
-  const prevBtn = document.getElementById('senaraiPrev');
-  const nextBtn = document.getElementById('senaraiNext');
-
-  if (prevBtn) {
-    if (senaraiState.page <= 1) {
-      prevBtn.classList.add('opacity-50', 'pointer-events-none', 'cursor-not-allowed');
-    } else {
-      prevBtn.classList.remove('opacity-50', 'pointer-events-none', 'cursor-not-allowed');
-    }
-  }
-
-  if (nextBtn) {
-    if (senaraiState.page >= totalPages) {
-      nextBtn.classList.add('opacity-50', 'pointer-events-none', 'cursor-not-allowed');
-    } else {
-      nextBtn.classList.remove('opacity-50', 'pointer-events-none', 'cursor-not-allowed');
-    }
-  }
-}
-
-
-// ===================================================
-// 4) EVENTS (PENTING) ✅
-// ===================================================
-
-// Toggle sort GPMP Kad Pecahan Kelas
-document.addEventListener('click', (e) => {
-  if (e.target.closest('#gpmpKelasSortBtn')) {
-    const btn = document.getElementById('gpmpKelasSortBtn');
-    if (!btn) return;
-
-    if (gpmpKelasSortState === "none") {
-      gpmpKelasSortState = "asc";
-      btn.classList.remove('desc');
-      btn.classList.add('asc');
-    } else if (gpmpKelasSortState === "asc") {
-      gpmpKelasSortState = "desc";
-      btn.classList.remove('asc');
-      btn.classList.add('desc');
-    } else {
-      gpmpKelasSortState = "none";
-      btn.classList.remove('asc', 'desc');
-    }
-    drawPecahanKelasBody();
-  }
-});
-
-
-// ✅ Toggle sort Markah & Gred Senarai Murid (INI YANG TIADA SEBELUM INI)
+                /* ===================================================
+   TAMBAHAN FIX: SORT MARKAH & GRED (Senarai Murid Tab 2)
+   - guna markahSortState & gredSortState sedia ada
+   - panggil drawSenaraiMuridPage() sedia ada
+   =================================================== */
 document.addEventListener('click', (e) => {
 
-  // ---- SORT MARKAH ----
+  // Klik ikon sort MARKAH
   if (e.target.closest('#senaraiMarkahSortBtn')) {
     const btnM = document.getElementById('senaraiMarkahSortBtn');
     const btnG = document.getElementById('senaraiGredSortBtn');
     if (!btnM || !btnG) return;
 
+    // toggle: none -> asc -> desc -> none
     if (markahSortState === "none") {
       markahSortState = "asc";
       btnM.classList.remove('desc');
@@ -3239,112 +3211,25 @@ document.addEventListener('click', (e) => {
       btnM.classList.remove('asc', 'desc');
     }
 
-    // bila markah sort, reset gred sort
+    // reset gred sort
     gredSortState = "none";
     btnG.classList.remove('asc', 'desc');
 
-    // redraw ikut sort state
-    drawSenaraiMuridPage();
-    return;
-  }
-
-  // ---- SORT GRED ----
-  if (e.target.closest('#senaraiGredSortBtn')) {
-    const btnG = document.getElementById('senaraiGredSortBtn');
-    const btnM = document.getElementById('senaraiMarkahSortBtn');
-    if (!btnM || !btnG) return;
-
-    if (gredSortState === "none") {
-      gredSortState = "asc";
-      btnG.classList.remove('desc');
-      btnG.classList.add('asc');
-    } else if (gredSortState === "asc") {
-      gredSortState = "desc";
-      btnG.classList.remove('asc');
-      btnG.classList.add('desc');
-    } else {
-      gredSortState = "none";
-      btnG.classList.remove('asc', 'desc');
-    }
-
-    // bila gred sort, reset markah sort
-    markahSortState = "none";
-    btnM.classList.remove('asc', 'desc');
-
-    // redraw ikut sort state
-    drawSenaraiMuridPage();
-    return;
-  }
-});
-
-
-// Page size change (termasuk "Semua")
-document.addEventListener('change', (e) => {
-  if (e.target && e.target.id === 'senaraiPageSize') {
-    const v = e.target.value;
-    senaraiState.pageSize = (v === "ALL") ? Number.POSITIVE_INFINITY : parseInt(v, 10);
+    // kekal halaman 1 bila sort (optional tapi lebih kemas)
     senaraiState.page = 1;
-    drawSenaraiMuridPage();
-  }
-});
 
-// Prev/Next nav
-document.addEventListener('click', (e) => {
-  if (e.target && e.target.id === 'senaraiPrev') {
-    if (senaraiState.page > 1) {
-      senaraiState.page--;
-      drawSenaraiMuridPage();
-    }
-  }
-
-  if (e.target && e.target.id === 'senaraiNext') {
-    const total = getSortedSenaraiRows().length;
-    let per = senaraiState.pageSize;
-    if (!Number.isFinite(per)) per = total || 1;
-    const totalPages = Math.max(1, Math.ceil(total / per));
-    if (senaraiState.page < totalPages) {
-      senaraiState.page++;
-      drawSenaraiMuridPage();
-    }
-  }
-});
-
-// ===================================================
-// TAMBAHAN SAHAJA: Toggle sort Markah & Gred Senarai Murid (Tab 2)
-// (Tidak ubah kod lain)
-// ===================================================
-document.addEventListener('click', (e) => {
-
-  if (e.target.closest('#senaraiMarkahSortBtn')) {
-    const btnM = document.getElementById('senaraiMarkahSortBtn');
-    const btnG = document.getElementById('senaraiGredSortBtn');
-    if (!btnM || !btnG) return;
-
-    if (markahSortState === "none") {
-      markahSortState = "asc";
-      btnM.classList.remove('desc');
-      btnM.classList.add('asc');
-    } else if (markahSortState === "asc") {
-      markahSortState = "desc";
-      btnM.classList.remove('asc');
-      btnM.classList.add('desc');
-    } else {
-      markahSortState = "none";
-      btnM.classList.remove('asc', 'desc');
-    }
-
-    gredSortState = "none";
-    btnG.classList.remove('asc', 'desc');
-
+    // redraw table
     drawSenaraiMuridPage();
     return;
   }
 
+  // Klik ikon sort GRED
   if (e.target.closest('#senaraiGredSortBtn')) {
     const btnG = document.getElementById('senaraiGredSortBtn');
     const btnM = document.getElementById('senaraiMarkahSortBtn');
     if (!btnM || !btnG) return;
 
+    // toggle: none -> asc -> desc -> none
     if (gredSortState === "none") {
       gredSortState = "asc";
       btnG.classList.remove('desc');
@@ -3358,16 +3243,20 @@ document.addEventListener('click', (e) => {
       btnG.classList.remove('asc', 'desc');
     }
 
+    // reset markah sort
     markahSortState = "none";
     btnM.classList.remove('asc', 'desc');
 
+    // kekal halaman 1 bila sort (optional)
+    senaraiState.page = 1;
+
+    // redraw table
     drawSenaraiMuridPage();
     return;
   }
 
 });
 
-                
 
                 // =======================================================
 // TAB 3: Analisis Layak Sijil (FIX "-" jadi Layak)
