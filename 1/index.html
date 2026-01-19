@@ -2912,8 +2912,8 @@ function generateOverallAnalysis() {
                     // Reset sorting & paging Senarai Murid
                     markahSortState = "none";
                     gredSortState = "none";
-                    document.getElementById('senaraiMarkahSortBtn').classList.remove('asc', 'desc');
-                    document.getElementById('senaraiGredSortBtn').classList.remove('asc', 'desc');
+                    document.getElementById('senaraiMarkahSortBtn')?.classList.remove('asc', 'desc');
+                    document.getElementById('senaraiGredSortBtn')?.classList.remove('asc', 'desc');
 
                     renderSenaraiMuridTable(data, subjekCode);
                     if (cardSenarai) cardSenarai.classList.remove('hidden');
@@ -3183,6 +3183,80 @@ function generateOverallAnalysis() {
                         }
                     }
                 });
+
+                /* ===================================================
+   TAMBAHAN FIX: SORT MARKAH & GRED (Senarai Murid Tab 2)
+   - guna markahSortState & gredSortState sedia ada
+   - panggil drawSenaraiMuridPage() sedia ada
+   =================================================== */
+document.addEventListener('click', (e) => {
+
+  // Klik ikon sort MARKAH
+  if (e.target.closest('#senaraiMarkahSortBtn')) {
+    const btnM = document.getElementById('senaraiMarkahSortBtn');
+    const btnG = document.getElementById('senaraiGredSortBtn');
+    if (!btnM || !btnG) return;
+
+    // toggle: none -> asc -> desc -> none
+    if (markahSortState === "none") {
+      markahSortState = "asc";
+      btnM.classList.remove('desc');
+      btnM.classList.add('asc');
+    } else if (markahSortState === "asc") {
+      markahSortState = "desc";
+      btnM.classList.remove('asc');
+      btnM.classList.add('desc');
+    } else {
+      markahSortState = "none";
+      btnM.classList.remove('asc', 'desc');
+    }
+
+    // reset gred sort
+    gredSortState = "none";
+    btnG.classList.remove('asc', 'desc');
+
+    // kekal halaman 1 bila sort (optional tapi lebih kemas)
+    senaraiState.page = 1;
+
+    // redraw table
+    drawSenaraiMuridPage();
+    return;
+  }
+
+  // Klik ikon sort GRED
+  if (e.target.closest('#senaraiGredSortBtn')) {
+    const btnG = document.getElementById('senaraiGredSortBtn');
+    const btnM = document.getElementById('senaraiMarkahSortBtn');
+    if (!btnM || !btnG) return;
+
+    // toggle: none -> asc -> desc -> none
+    if (gredSortState === "none") {
+      gredSortState = "asc";
+      btnG.classList.remove('desc');
+      btnG.classList.add('asc');
+    } else if (gredSortState === "asc") {
+      gredSortState = "desc";
+      btnG.classList.remove('asc');
+      btnG.classList.add('desc');
+    } else {
+      gredSortState = "none";
+      btnG.classList.remove('asc', 'desc');
+    }
+
+    // reset markah sort
+    markahSortState = "none";
+    btnM.classList.remove('asc', 'desc');
+
+    // kekal halaman 1 bila sort (optional)
+    senaraiState.page = 1;
+
+    // redraw table
+    drawSenaraiMuridPage();
+    return;
+  }
+
+});
+
 
                 // =======================================================
 // TAB 3: Analisis Layak Sijil (FIX "-" jadi Layak)
